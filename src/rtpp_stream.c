@@ -462,9 +462,12 @@ rtpp_stream_check_latch_override(struct rtpp_stream *self,
         return (0);
     if (packet->parsed->ssrc != pvt->latch_info.ssrc.val)
         return (0);
+
+#if 0  /* PRX-1026 Disable SEQ check 2016-11-11 */
     if (packet->parsed->seq < pvt->latch_info.seq && pvt->latch_info.seq - packet->parsed->seq < 536)
         return (0);
-
+#endif
+    
     actor = rtpp_stream_get_actor(self);
 
     addrport2char_r(sstosa(&packet->raddr), saddr, sizeof(saddr), ':');
