@@ -32,6 +32,7 @@
 #include <inttypes.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <syslog.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +53,8 @@
 #include "rtpp_network.h"
 #include "rtpp_cfg_stable.h"
 
+#define APP_NAME "rtpproxy"
+
 #define SSRC_STRLEN 11
 
 struct rtpp_mod_acct_face {
@@ -60,15 +63,14 @@ struct rtpp_mod_acct_face {
    char ssrc[SSRC_STRLEN];
 };
 
-struct rtpp_module_priv {
-   int fd;
+struct rtpp_module_priv {i
    pid_t pid;
-   struct stat stt;
-   char fname[MAXPATHLEN + 1];
    double next_hupd_ts;
    char node_id[_POSIX_HOST_NAME_MAX + 1];
    struct rtpp_mod_acct_face o;
    struct rtpp_mod_acct_face a;
+   int log_opened;
+   int log_facility;
 };
 
 /* Bump this when some changes are made */
@@ -175,23 +177,14 @@ static int
 rtpp_acct_csv_open(struct rtpp_module_priv *pvt)
 {
     char *buf;
-    int len, pos;
+    int len;
 
-    if (pvt->fd != -1) {
-        close(pvt->fd);
+    if (pvt->log_opened != 0) {
+        closelog();
     }
-    pvt->fd = open(pvt->fname, O_WRONLY | O_APPEND | O_CREAT, DEFFILEMODE);
-    if (pvt->fd == -1) {
-        goto e0;
-    }
-    pos = rtpp_acct_csv_lockf(pvt->fd);
-    if (pos < 0) {
-        goto e1;
-    }
-    if (fstat(pvt->fd, &pvt->stt) < 0) {
-        goto e2;
-    }
-    if (pvt->stt.st_size == 0) {
+	openlog(APP_NAME, LOG_PID | LOG_CONS, pvt->log_facility);
+
+#if 0
         buf = NULL;
         len = mod_asprintf(&buf, RVER_NM SEP NID_NM SEP PID_NM SEP SID_NM
           SEP CID_NM SEP
@@ -210,22 +203,19 @@ rtpp_acct_csv_open(struct rtpp_module_priv *pvt)
           HLD_STS_NM_O SEP HLD_STS_NM_A SEP HLD_CNT_NM_O SEP HLD_CNT_NM_A "\n");
         if (len <= 0) {
             if (len == 0 && buf != NULL) {
-                goto e3;
+                goto e1;
             }
-            goto e2;
+            goto e0;
         }
-        write(pvt->fd, buf, len);
-        mod_free(buf);
-    }
-    rtpp_acct_csv_unlockf(pvt->fd, pos);
+        /*write(pvt->fd, buf, len);*/
+        mod_free(buf)
+#endif
+
+	pvt->log_opened = 1;
     return (0);
 
-e3:
-    mod_free(buf);
-e2:
-    rtpp_acct_csv_unlockf(pvt->fd, pos);
 e1:
-    close(pvt->fd);
+    mod_free(buf);
 e0:
     return (-1);
 }
@@ -240,16 +230,11 @@ rtpp_acct_csv_ctor(struct rtpp_cfg_stable *cfsp)
         goto e0;
     }
     pvt->pid = getpid();
-    if (cfsp->cwd_orig == NULL) {
-        snprintf(pvt->fname, sizeof(pvt->fname), "%s", "rtpproxy_acct.csv");
-    } else {
-        snprintf(pvt->fname, sizeof(pvt->fname), "%s/%s", cfsp->cwd_orig,
-          "rtpproxy_acct.csv");
-    }
     if (gethostname(pvt->node_id, sizeof(pvt->node_id)) != 0) {
         strcpy(pvt->node_id, "UNKNOWN");
     }
-    pvt->fd = -1;
+    pvt->log_opened = 0;
+	pvt->log_facility = (cfsp->log_facility == LOG_LOCAL5) ? LOG_LOCAL6 : LOG_LOCAL5;
     if (rtpp_acct_csv_open(pvt) == -1) {
         goto e1;
     }
@@ -265,7 +250,8 @@ static void
 rtpp_acct_csv_dtor(struct rtpp_module_priv *pvt)
 {
 
-    close(pvt->fd);
+    closelog();
+	pvt->log_opened = 0;
     mod_free(pvt);
     return;
 }
@@ -313,18 +299,9 @@ rtpp_acct_csv_do(struct rtpp_module_priv *pvt, struct rtpp_acct *acct)
     struct stat stt;
 
     buf = NULL;
-    rval = stat(pvt->fname, &stt);
-    if (rval != -1) {
-        if (stt.st_dev != pvt->stt.st_dev || stt.st_ino != pvt->stt.st_ino) {
-            rtpp_acct_csv_open(pvt);
-        }
-    } else if (rval == -1 && errno == ENOENT) {
+	if (pvt->log_opened == 0) {
         rtpp_acct_csv_open(pvt);
-    }
-    pos = rtpp_acct_csv_lockf(pvt->fd);
-    if (pos < 0) {
-        return;
-    }
+	}
 
     format_ssrc(&acct->rasta->last_ssrc, pvt->a.ssrc, sizeof(pvt->a.ssrc));
     format_ssrc(&acct->rasto->last_ssrc, pvt->o.ssrc, sizeof(pvt->o.ssrc));
@@ -358,40 +335,6 @@ rtpp_acct_csv_do(struct rtpp_module_priv *pvt, struct rtpp_acct *acct)
         }
         return;
     }
-    write(pvt->fd, buf, len);
-    rtpp_acct_csv_unlockf(pvt->fd, pos);
+	syslog(LOG_INFO, "%s", buf);
     mod_free(buf);
-}
-
-static off_t
-rtpp_acct_csv_lockf(int fd)
-{
-    struct flock l;
-    int rval;
-
-    memset(&l, '\0', sizeof(l));
-    l.l_whence = SEEK_CUR;
-    l.l_type = F_WRLCK;
-    do {
-        rval = fcntl(fd, F_SETLKW, &l);
-    } while (rval == -1 && errno == EINTR);
-    if (rval == -1) {
-        return (-1);
-    }
-    return lseek(fd, 0, SEEK_CUR);
-}
-
-static void
-rtpp_acct_csv_unlockf(int fd, off_t offset)
-{
-    struct flock l;
-    int rval;
-
-    memset(&l, '\0', sizeof(l));
-    l.l_whence = SEEK_SET;
-    l.l_start = offset;
-    l.l_type = F_UNLCK;
-    do {
-        rval = fcntl(fd, F_SETLKW, &l);
-    } while (rval == -1 && errno == EINTR);
 }
