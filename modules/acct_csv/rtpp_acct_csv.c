@@ -63,7 +63,7 @@ struct rtpp_mod_acct_face {
    char ssrc[SSRC_STRLEN];
 };
 
-struct rtpp_module_priv {i
+struct rtpp_module_priv {
    pid_t pid;
    double next_hupd_ts;
    char node_id[_POSIX_HOST_NAME_MAX + 1];
