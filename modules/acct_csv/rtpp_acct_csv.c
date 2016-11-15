@@ -176,13 +176,15 @@ rtpp_acct_get_nid(struct rtpp_module_priv *pvt, struct rtpp_acct *ap)
 static int
 rtpp_acct_csv_open(struct rtpp_module_priv *pvt)
 {
-    char *buf;
+#if 0
+	char *buf;
     int len;
 
     if (pvt->log_opened != 0) {
         closelog();
     }
 	openlog(APP_NAME, LOG_PID | LOG_CONS, pvt->log_facility);
+#endif
 
 #if 0
         buf = NULL;
@@ -214,10 +216,12 @@ rtpp_acct_csv_open(struct rtpp_module_priv *pvt)
 	pvt->log_opened = 1;
     return (0);
 
+#if 0
 e1:
     mod_free(buf);
 e0:
     return (-1);
+#endif
 }
 
 static struct rtpp_module_priv *
@@ -250,7 +254,9 @@ static void
 rtpp_acct_csv_dtor(struct rtpp_module_priv *pvt)
 {
 
+#if 0
     closelog();
+#endif
 	pvt->log_opened = 0;
     mod_free(pvt);
     return;
@@ -335,6 +341,6 @@ rtpp_acct_csv_do(struct rtpp_module_priv *pvt, struct rtpp_acct *acct)
         }
         return;
     }
-	syslog(LOG_INFO, "%s", buf);
+	syslog(LOG_MAKEPRI(pvt->log_facility, LOG_INFO), "%s", buf);
     mod_free(buf);
 }
