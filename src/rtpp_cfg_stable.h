@@ -129,6 +129,8 @@ struct rtpp_cfg_stable {
 
     char *mpath;
     struct rtpp_module_if *modules_cf;
+
+    unsigned int max_buffer;
 };
 
 #endif
