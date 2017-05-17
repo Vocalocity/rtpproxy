@@ -110,7 +110,7 @@ struct rtpp_command_priv {
 
 struct d_opts;
 
-static int create_twinlistener(uint16_t, int, void *);
+static int create_twinlistener(uint16_t, void *);
 static void handle_info(struct cfg *, struct rtpp_command *,
   const char *);
 static void handle_ver_feature(struct cfg *cf, struct rtpp_command *cmd);
@@ -123,10 +123,10 @@ struct create_twinlistener_args {
 };
 
 static int
-create_twinlistener(uint16_t port, int so_rcvbuf, void *ap)
+create_twinlistener(uint16_t port, void *ap)
 {
     struct sockaddr_storage iac;
-    int rval, i;
+    int rval, i, so_rcvbuf;
     struct create_twinlistener_args *ctap;
 
     ctap = (struct create_twinlistener_args *)ap;
@@ -156,7 +156,7 @@ create_twinlistener(uint16_t port, int so_rcvbuf, void *ap)
 	if ((ctap->ia->sa_family == AF_INET) && (ctap->cfs->tos >= 0) &&
 	  (CALL_METHOD(ctap->fds[i], settos, ctap->cfs->tos) == -1))
 	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set TOS to %d", ctap->cfs->tos);
-	so_rcvbuf = (so_rcvbuf == 0)?256 * 1024:so_rcvbuf;
+	so_rcvbuf = ctap->cfs->max_buffer;
 	if (CALL_METHOD(ctap->fds[i], setrbuf, so_rcvbuf) == -1)
 	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set receive buffer size");
         CALL_METHOD(ctap->fds[i], setnonblock);

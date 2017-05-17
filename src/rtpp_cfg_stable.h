@@ -131,6 +131,7 @@ struct rtpp_cfg_stable {
     struct rtpp_module_if *modules_cf;
 
     unsigned int max_buffer;
+    unsigned int max_command_buffer;
 };
 
 #endif

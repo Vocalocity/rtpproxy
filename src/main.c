@@ -245,7 +245,8 @@ init_config(struct cfg *cf, int argc, char **argv)
     cf->stable->advaddr[0] = NULL;
     cf->stable->advaddr[1] = NULL;
 
-    cf->stable->max_buffer = 16 * 1024;
+    cf->stable->max_command_buffer = 16 * 1024;
+    cf->stable->max_buffer = 256 * 1024;
     cf->stable->max_ttl = SESSION_TIMEOUT;
     cf->stable->tos = TOS;
     cf->stable->rrtcp = 1;
