@@ -158,7 +158,9 @@ create_twinlistener(uint16_t port, void *ap)
 	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set TOS to %d", ctap->cfs->tos);
 	so_rcvbuf = ctap->cfs->max_buffer;
 	if (CALL_METHOD(ctap->fds[i], setrbuf, so_rcvbuf) == -1)
-	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set receive buffer size");
+	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set %d receive buffer size", so_rcvbuf);
+    else
+        RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_INFO, "set %d receive buffer size", so_rcvbuf);
         CALL_METHOD(ctap->fds[i], setnonblock);
         CALL_METHOD(ctap->fds[i], settimestamp);
     }
