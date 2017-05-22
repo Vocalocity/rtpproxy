@@ -133,9 +133,9 @@ controlfd_init_udp(struct cfg *cf, struct rtpp_ctrl_sock *csp)
     controlfd = socket(i, SOCK_DGRAM, 0);
     if (controlfd == -1)
         err(1, "can't create socket");
-    so_rcvbuf = 16 * 1024;
+    so_rcvbuf = cf->stable->max_command_buffer;
     if (setsockopt(controlfd, SOL_SOCKET, SO_RCVBUF, &so_rcvbuf, sizeof(so_rcvbuf)) == -1)
-        RTPP_ELOG(cf->stable->glog, RTPP_LOG_ERR, "unable to set 16K receive buffer size on controlfd");
+        RTPP_ELOG(cf->stable->glog, RTPP_LOG_ERR, "unable to set %d receive buffer size on controlfd", so_rcvbuf);
     if (bind(controlfd, ifsin, SA_LEN(ifsin)) < 0)
         err(1, "can't bind to a socket");
 
@@ -164,9 +164,9 @@ controlfd_init_tcp(struct cfg *cf, struct rtpp_ctrl_sock *csp)
     controlfd = socket(i, SOCK_STREAM, 0);
     if (controlfd == -1)
         err(1, "can't create socket");
-    so_rcvbuf = 16 * 1024;
+    so_rcvbuf = cf->stable->max_command_buffer;
     if (setsockopt(controlfd, SOL_SOCKET, SO_RCVBUF, &so_rcvbuf, sizeof(so_rcvbuf)) == -1)
-        RTPP_ELOG(cf->stable->glog, RTPP_LOG_ERR, "unable to set 16K receive buffer size on controlfd");
+        RTPP_ELOG(cf->stable->glog, RTPP_LOG_ERR, "unable to set %d receive buffer size on controlfd", so_rcvbuf);
     if (bind(controlfd, ifsin, SA_LEN(ifsin)) < 0)
         err(1, "can't bind to a socket");
     if (listen(controlfd, 32) != 0)

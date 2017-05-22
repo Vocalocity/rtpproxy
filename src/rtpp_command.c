@@ -156,9 +156,9 @@ create_twinlistener(uint16_t port, void *ap)
 	if ((ctap->ia->sa_family == AF_INET) && (ctap->cfs->tos >= 0) &&
 	  (CALL_METHOD(ctap->fds[i], settos, ctap->cfs->tos) == -1))
 	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set TOS to %d", ctap->cfs->tos);
-	so_rcvbuf = 256 * 1024;
+	so_rcvbuf = ctap->cfs->max_buffer;
 	if (CALL_METHOD(ctap->fds[i], setrbuf, so_rcvbuf) == -1)
-	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set 256K receive buffer size");
+	    RTPP_ELOG(ctap->cfs->glog, RTPP_LOG_ERR, "unable to set %d receive buffer size", so_rcvbuf);
         CALL_METHOD(ctap->fds[i], setnonblock);
         CALL_METHOD(ctap->fds[i], settimestamp);
     }

@@ -120,7 +120,8 @@ usage(void)
       "[-6 addr1[/addr2]] [-s path]\n\t  [-t tos] [-r rdir [-S sdir]] [-T ttl] "
       "[-L nfiles] [-m port_min]\n\t  [-M port_max] [-u uname[:gname]] [-w sock_mode] "
       "[-n timeout_socket]\n\t  [-d log_level[:log_facility]] [-p pid_file]\n"
-      "\t  [-c fifo|rr] [-A addr1[/addr2] [-N random/sched_offset] [-W setup_ttl]\n"
+      "\t  [-c fifo|rr] [-A addr1[/addr2] [-N random/sched_offset] [-W setup_ttl]\n\t  "
+      "[-B max_rcv_buffer] [-g max_command_buffer]\n"
       "\trtpproxy -V\n");
     exit(1);
 }
@@ -224,7 +225,7 @@ static void
 init_config(struct cfg *cf, int argc, char **argv)
 {
     int ch, i, umode, stdio_mode;
-    char *bh[2], *bh6[2], *cp, *tp[2];
+    char *bh[2], *bh6[2], *cp, *tp[2], *tmp;
     const char *errmsg;
     struct passwd *pp;
     struct group *gp;
@@ -245,6 +246,8 @@ init_config(struct cfg *cf, int argc, char **argv)
     cf->stable->advaddr[0] = NULL;
     cf->stable->advaddr[1] = NULL;
 
+    cf->stable->max_command_buffer = 16 * 1024;
+    cf->stable->max_buffer = 256 * 1024;
     cf->stable->max_ttl = SESSION_TIMEOUT;
     cf->stable->tos = TOS;
     cf->stable->rrtcp = 1;
@@ -278,7 +281,7 @@ init_config(struct cfg *cf, int argc, char **argv)
 
     option_index = -1;
     while ((ch = getopt_long(argc, argv, "vf2Rl:6:s:S:t:r:p:T:L:m:M:u:Fin:Pad:"
-      "VN:c:A:w:bW:DC", longopts, &option_index)) != -1) {
+      "VN:c:A:w:bW:DCB:g:", longopts, &option_index)) != -1) {
 	switch (ch) {
         case 0:
             RTPP_DBG_ASSERT(option_index >= 0);
@@ -526,7 +529,18 @@ init_config(struct cfg *cf, int argc, char **argv)
            printf("%s\n", get_mclock_name());
            rtpp_exit(0);
            break;
-
+    case 'B':
+      cf->stable->max_buffer=strtol(optarg, &tmp, 10);
+      if (tmp &&(*tmp)){
+        errx(1, "bad max buffer size number: -B %s\n", optarg);
+      }
+      break;
+    case 'g':
+      cf->stable->max_command_buffer=strtol(optarg, &tmp, 10);
+      if (tmp &&(*tmp)){
+        errx(1, "bad max command buffer size number: -g %s\n", optarg);
+      }
+      break;
 	case '?':
 	default:
 	    usage();
@@ -788,6 +802,8 @@ main(int argc, char **argv)
     _sig_cf = &cf;
     atexit(ehandler);
     RTPP_LOG(cf.stable->glog, RTPP_LOG_INFO, "rtpproxy started, pid %d", getpid());
+    RTPP_LOG(cf.stable->glog, RTPP_LOG_INFO, "rtpproxy so_rcvbuf %d", cf.stable->max_buffer);
+    RTPP_LOG(cf.stable->glog, RTPP_LOG_INFO, "rtpproxy command so_rcvbuf %d", cf.stable->max_command_buffer);
 
 #ifdef RTPP_CHECK_LEAKS
     rtpp_memdeb_setbaseln(_rtpproxy_memdeb);
