@@ -47,6 +47,7 @@
 
 #define FIX_TIMESTAMP_RESET    1
 #define DEBUG_TIMESTAMP_RESET  0
+#define DEBUG_LARGE_TIMESTAMP  1
 
 struct rtp_analyze_jdata;
 
@@ -172,7 +173,7 @@ update_jitter_stats(struct rtp_analyze_jdata *jdp,
         }
         dval = (rtime_ts - ((uint64_t)rinfo->ts + wrcorr)) -
           (jdp->jss.prev_rtime_ts - (uint64_t) jdp->jss.prev_ts);
-#if DEBUG_TIMESTAMP_RESET
+#if DEBUG_LARGE_TIMESTAMP
         if (dval > 10000)
             fprintf(stderr, "##### LARGE VALUE #####" SSRC_FMT ",%lld,%ld,%u,%ld,%u,%ld,%ld\n", rinfo->ssrc, jdp->jss.pcount,
                 rtime_ts, rinfo->ts, jdp->jss.prev_rtime_ts, jdp->jss.prev_ts, wrcorr, dval);
@@ -392,7 +393,8 @@ update_rtpp_stats(struct rtpp_log *rlog, struct rtpp_session_stat *stat, rtp_hdr
         return (UPDATE_SSRC_CHG);
     }
     seq = rinfo->seq + stat->last.seq_offset;
-    if (header->mbt && (seq < stat->last.max_seq && (stat->last.max_seq & 0xffff) != 65535)) {
+    /* if (header->mbt && (seq < stat->last.max_seq && (stat->last.max_seq & 0xffff) != 65535)) { */
+    if (header->mbt) {
         LOGD_IF_NOT_NULL(rlog, SSRC_FMT "/%d: seq reset last->max_seq=%u, seq=%u, m=%u\n",
           rinfo->ssrc, rinfo->seq, stat->last.max_seq, seq, header->mbt);
         /* Seq reset has happened. Treat it as a ssrc change */
