@@ -207,7 +207,7 @@ syslog_async_init(const char *app, int facility)
     syslog_queue_inited = 1;
     pthread_mutex_unlock(&syslog_init_mutex);
 
-    openlog(app, LOG_PID | LOG_CONS, facility);
+    openlog(app, LOG_PID, facility);
     atexit(syslog_async_atexit);
 
     return 0;

@@ -183,7 +183,7 @@ rtpp_acct_csv_open(struct rtpp_module_priv *pvt)
     if (pvt->log_opened != 0) {
         closelog();
     }
-	openlog(APP_NAME, LOG_PID | LOG_CONS, pvt->log_facility);
+	openlog(APP_NAME, LOG_PID, pvt->log_facility);
 #endif
 
 #if 0
