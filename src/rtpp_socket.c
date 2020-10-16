@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h> //fprintf
 
 #include "rtpp_types.h"
 #include "rtpp_refcnt.h"
@@ -46,6 +47,7 @@
 #include "rtpp_network.h"
 #include "rtp.h"
 #include "rtp_packet.h"
+#include "stun.h"
 
 struct rtpp_socket_priv {
     struct rtpp_socket pub;
@@ -232,6 +234,46 @@ rtpp_socket_rtp_recv_simple(struct rtpp_socket *self, double dtime,
     return (packet);
 }
 
+void process_stun_request(struct rtp_packet *packet, int fd) {
+
+    struct sockaddr *sa = sstosa(&packet->raddr);
+    const struct sockaddr_in *sin = satosin(sa);
+
+    if (sin->sin_family != AF_INET)
+        return;
+
+    str s;
+    s.s = (char *)packet->data.buf;
+    s.len = (int)packet->size;
+
+    if (is_stun(&s) != 1)
+        return;
+
+    fprintf(stderr,"====================== stun request ======================\n");
+    unsigned char *ptr = s.s;
+    int size = s.len;
+    int i;
+    for (i=0; i<size; i++) {
+      if (i%16==0)
+	fprintf(stderr,"\n");
+      fprintf(stderr,"%02x ", *ptr++ & 0xff);
+    }
+    fprintf(stderr,"\n");
+    fprintf(stderr,"======================\n");
+
+    struct stream_fd sfd;
+    sfd.fd = fd;
+
+    endpoint_t ep;
+    ep.ipv4 = sin->sin_addr;
+    ep.port = ntohs(sin->sin_port);
+    ep.sin = sin;
+
+    int stun_ret = stun(&s, &sfd, &ep);
+    fprintf (stderr, "stun_ret = %d\n", stun_ret);
+
+}
+
 static struct rtp_packet *
 rtpp_socket_rtp_recv(struct rtpp_socket *self, double dtime,
   struct sockaddr *laddr, int port)
@@ -252,7 +294,7 @@ rtpp_socket_rtp_recv(struct rtpp_socket *self, double dtime,
     llen = sizeof(packet->_laddr);
     memset(&rtime, '\0', sizeof(rtime));
     packet->size = recvfromto(pvt->fd, packet->data.buf, sizeof(packet->data.buf),
-      sstosa(&packet->raddr), &packet->rlen, sstosa(&packet->_laddr), &llen,
+      sstosa(&packet->raddr), (size_t*)&packet->rlen, sstosa(&packet->_laddr), &llen,
       &rtime);
 
     if (packet->size == -1) {
@@ -271,6 +313,8 @@ rtpp_socket_rtp_recv(struct rtpp_socket *self, double dtime,
     } else {
         packet->rtime = dtime;
     }
+
+    process_stun_request(packet, pvt->fd);
 
     return (packet);
 }

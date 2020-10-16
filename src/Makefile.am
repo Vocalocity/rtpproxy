@@ -1,5 +1,6 @@
 bin_PROGRAMS=rtpproxy rtpproxy_debug
 BASE_SOURCES=main.c rtp.h rtpp_server.c rtpp_server.h \
+  stun.c stun.h str.h \
   rtpp_defines.h rtpp_log.h rtpp_record.c rtpp_record.h rtpp_session.h \
   rtpp_util.c rtpp_util.h rtp.c rtp_resizer.c rtp_resizer.h rtpp_session.c \
   rtpp_command.c rtpp_command.h rtpp_network.h rtpp_network.c \
@@ -33,7 +34,7 @@ BASE_SOURCES=main.c rtp.h rtpp_server.c rtpp_server.h \
   rtpp_acct.h rtpp_stats.h rtpp_bindaddrs.c rtpp_bindaddrs.h rtpp_ssrc.h \
   rtpp_netaddr.c rtpp_netaddr.h rtpp_acct_pipe.h
 
-rtpproxy_LDADD=-lm -lpthread
+rtpproxy_LDADD=-lm -lpthread -lz -lssl -lcrypto
 rtpproxy_debug_LDADD=${rtpproxy_LDADD} $(top_srcdir)/libexecinfo/libexecinfo.a \
   @LIBS_DL@
 rtpproxy_debug_LDFLAGS=-static -Wl,--export-dynamic
