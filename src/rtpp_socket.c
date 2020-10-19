@@ -237,20 +237,18 @@ rtpp_socket_rtp_recv_simple(struct rtpp_socket *self, double dtime,
 void process_stun_request(struct rtp_packet *packet, int fd) {
 
     struct sockaddr *sa = sstosa(&packet->raddr);
-    const struct sockaddr_in *sin = satosin(sa);
+    struct sockaddr_in *sin = satosin(sa);
 
     if (sin->sin_family != AF_INET)
         return;
 
-    str s;
-    s.s = (char *)packet->data.buf;
-    s.len = (int)packet->size;
+    str s = { (char *)packet->data.buf, (int)packet->size };
 
     if (is_stun(&s) != 1)
         return;
 
     fprintf(stderr,"====================== stun request ======================\n");
-    unsigned char *ptr = s.s;
+    char *ptr = s.s;
     int size = s.len;
     int i;
     for (i=0; i<size; i++) {
@@ -261,13 +259,13 @@ void process_stun_request(struct rtp_packet *packet, int fd) {
     fprintf(stderr,"\n");
     fprintf(stderr,"======================\n");
 
-    struct stream_fd sfd;
-    sfd.fd = fd;
+    struct ice_agent ice_agent = { .pwd[0] = {PASSWORD, strlen(PASSWORD)}, .pwd[1] = {PASSWORD, strlen(PASSWORD)} };
+    struct call_media media = { &ice_agent };
+    struct packet_stream ps = { &media };
+    struct stream_fd sfd = { .socket.fd = fd, &ps };
 
-    endpoint_t ep;
-    ep.ipv4 = sin->sin_addr;
-    ep.port = ntohs(sin->sin_port);
-    ep.sin = sin;
+    struct socket_family family = { sin->sin_family };
+    endpoint_t ep = { {&family, .u.ipv4=sin->sin_addr}, ntohs(sin->sin_port), sin };
 
     int stun_ret = stun(&s, &sfd, &ep);
     fprintf (stderr, "stun_ret = %d\n", stun_ret);

@@ -118,17 +118,15 @@ struct software {
 /* XXX add const in functions */
 
 
-#define RTPPROXY_VERSION "dummy"
+#define RTPPROXY_VERSION "2.9.9"
 #define ice_request(a,b,c) 1
 #define ice_response(a,b,c,d) 1
 #define ilog(prio, fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
 #define check_auth(a,b,c,d,e) 0
-#define PASSWORD "on3mbLYv18aG3uI7+2w90QY"
-
-static ssize_t socket_sendmsg(int fd, struct msghdr *mh, const endpoint_t *ep) {
+static ssize_t socket_sendmsg(struct socket* socket, struct msghdr *mh, const endpoint_t *ep) {
 	mh->msg_name = ep->sin;
 	mh->msg_namelen = sizeof(struct sockaddr_in);
-	return sendmsg(fd, mh, 0);
+	return sendmsg(socket->fd, mh, 0);
 }
 
 static int stun_attributes(struct stun_attrs *out, str *s, u_int16_t *unknowns, struct header *req) {
@@ -414,14 +412,11 @@ static void stun_error_len(struct stream_fd *sfd, const endpoint_t *sin,
 	if (attr_cont)
 		output_add_data_wr(&mh, &aa, add_attr, attr_cont, attr_len);
 
-	str pwd;
-	pwd.s = PASSWORD;
-	pwd.len = strlen(pwd.s);
-	integrity(&mh, &mi, &/*sfd->stream->media->ice_agent->pwd[0]*/pwd);
+	integrity(&mh, &mi, &sfd->stream->media->ice_agent->pwd[0]);
 	fingerprint(&mh, &fp);
 
 	output_finish_src(&mh);
-	socket_sendmsg(/*&sfd->socket*/sfd->fd, &mh, sin);
+	socket_sendmsg(&sfd->socket, &mh, sin);
 }
 
 #define stun_error(sfd, sin, req, code, reason) \
@@ -506,30 +501,25 @@ static int stun_binding_success(struct stream_fd *sfd, struct header *req, struc
 	software(&mh, &sw);
 
 	xma.port = htons(sin->port ^ (STUN_COOKIE >> 16));
-	if (/*sin->address.family->af == AF_INET*/1) {
+	if (sin->address.family->af == AF_INET) {
 		xma.family = htons(0x01);
-		xma.address[0] = sin->ipv4.s_addr ^ htonl(STUN_COOKIE);
+		xma.address[0] = sin->address.u.ipv4.s_addr ^ htonl(STUN_COOKIE);
 		output_add_len(&mh, &xma, STUN_XOR_MAPPED_ADDRESS, 8);
 	}
 	else {
-#if 0
 		xma.family = htons(0x02);
 		xma.address[0] = sin->address.u.ipv6.s6_addr32[0] ^ htonl(STUN_COOKIE);
 		xma.address[1] = sin->address.u.ipv6.s6_addr32[1] ^ req->transaction[0];
 		xma.address[2] = sin->address.u.ipv6.s6_addr32[2] ^ req->transaction[1];
 		xma.address[3] = sin->address.u.ipv6.s6_addr32[3] ^ req->transaction[2];
 		output_add(&mh, &xma, STUN_XOR_MAPPED_ADDRESS);
-#endif
 	}
 
-	str pwd;
-	pwd.s = PASSWORD;
-	pwd.len = strlen(pwd.s);
-	integrity(&mh, &mi, &/*sfd->stream->media->ice_agent->pwd[1]*/pwd);
+	integrity(&mh, &mi, &sfd->stream->media->ice_agent->pwd[1]);
 	fingerprint(&mh, &fp);
 
 	output_finish_src(&mh);
-	socket_sendmsg(/*&sfd->socket*/sfd->fd, &mh, sin);
+	socket_sendmsg(&sfd->socket, &mh, sin);
 
 	return 0;
 }
@@ -567,7 +557,7 @@ static int __stun_request(struct stream_fd *sfd, const endpoint_t *sin,
 	*/
 	char buf[64];
 	buf[0] = '\0';
-	if (inet_ntop(AF_INET, &sin->ipv4, buf, sizeof(buf))) {
+	if (inet_ntop(AF_INET, &sin->address.u.ipv4, buf, sizeof(buf))) {
 	  sprintf(buf + strlen(buf), ":%u", sin->port);
 	  fprintf(stderr,"Successful STUN binding request from %s\n", buf);
 	}
@@ -604,11 +594,6 @@ int stun(const str *b, struct stream_fd *sfd, const endpoint_t *sin) {
 	int dst_idx, src_idx;
 	struct packet_stream *ps = sfd->stream;
 
-	{
-		int i;
-		for (i=0; i<UNKNOWNS_COUNT;i++)
-			unknowns[i]=0;
-	}
 	msglen = ntohs(req->msg_len);
 	err = "message-length mismatch";
 	if (msglen + 20 > b->len || msglen < 0)

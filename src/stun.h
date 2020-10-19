@@ -17,13 +17,37 @@
 */
 
 
-struct stream_fd {
+#define PASSWORD "on3mbLYv18aG3uI7+2w90QY"
+
+struct ice_agent {
+	str pwd[2];
+};
+struct call_media {
+	struct ice_agent *ice_agent;
+};
+struct packet_stream {
+	struct call_media *media;
+};
+struct socket {
 	int fd;
+};
+struct stream_fd {
+	struct socket socket;
 	struct packet_stream *stream;
 };
 
+struct socket_family {
+	int af;
+};
+struct socket_address {
+	struct socket_family *family;
+	union {
+		struct in_addr ipv4;
+		struct in6_addr ipv6;
+	} u;
+};
 struct endpoint {
-	struct in_addr ipv4;
+	struct socket_address address;
 	unsigned int port;
 	struct sockaddr_in *sin;
 };
