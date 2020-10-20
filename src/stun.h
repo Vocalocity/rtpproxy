@@ -17,8 +17,6 @@
 */
 
 
-#define PASSWORD "on3mbLYv18aG3uI7+2w90QY"
-
 struct ice_agent {
 	str pwd[2];
 };

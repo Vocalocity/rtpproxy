@@ -1,0 +1,16 @@
+## About
+
+The rtpproxy was modified to process incoming STUN binding requests. This was accomplished by porting the STUN functionality from rtpengine and adapting it for use in rtpproxy.  The code that handles the STUN requests was slightly modified to allow it to compile in the rtpproxy project. So, that code is almost identical to what was ported from rtpengine.  The networking components of the STUN engine were modified to make it compatible with with the networking components of rtpproxy. Some of the rtpengine data structures had to be sufficiently replicated to conform to the rtpengine STUN api's.
+
+Since rtpproxy does not support ICE, we had to fake the support for a password which, in rtpengine, is acquired on per-call basis from ice agents.  In order to achive this, this password is passed in to rtpproxy via a new "-x" command line parameter (e.g. -x on3mbLYv18aG3uI7+2w90QY). This parameter is specified in the rtpproxy's system configuration file (e.g. /etc/sysconfig/rtpproxy.conf).  The same password is used for all STUN requests and it must match the password used in the registrar.
+
+## TO-DO
+
+- Add support for IPV6 - currently rtppxoxy will not process incoming STUN requests on PPV4
+- Dynamic password - allow the controller to dynamically provide the STUN passwords on a per-call basis.
+
+
+
+
+
+

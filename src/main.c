@@ -107,6 +107,7 @@
 #endif
 
 static void usage(void);
+char stun_passwd[100];
 
 #ifdef RTPP_CHECK_LEAKS
 RTPP_MEMDEB_STATIC(rtpproxy);
@@ -233,6 +234,8 @@ init_config(struct cfg *cf, int argc, char **argv)
     struct rtpp_ctrl_sock *ctrl_sock;
     int option_index;
 
+    strcpy(stun_passwd, "on3mbLYv18aG3uI7+2w90QY");
+
     bh[0] = bh[1] = bh6[0] = bh6[1] = NULL;
 
     umode = stdio_mode = 0;
@@ -281,6 +284,7 @@ init_config(struct cfg *cf, int argc, char **argv)
 
     option_index = -1;
     while ((ch = getopt_long(argc, argv, "vf2Rl:6:s:S:t:r:p:T:L:m:M:u:Fin:Pad:"
+      "x:"
       "VN:c:A:w:bW:DCB:g:", longopts, &option_index)) != -1) {
 	switch (ch) {
         case 0:
@@ -429,6 +433,13 @@ init_config(struct cfg *cf, int argc, char **argv)
 
 	case 'm':
 	    cf->stable->port_min = atoi(optarg);
+	    break;
+
+	case 'x':
+	    if (optarg && strlen(optarg)) {
+		strcpy(stun_passwd, optarg);
+		fprintf (stderr, "stun_passwd = %s\n", stun_passwd);
+	    }
 	    break;
 
 	case 'M':

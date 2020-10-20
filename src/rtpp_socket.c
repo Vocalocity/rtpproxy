@@ -54,6 +54,8 @@ struct rtpp_socket_priv {
     int fd;
 };
 
+extern char stun_passwd[];
+
 static void rtpp_socket_dtor(struct rtpp_socket_priv *);
 static int rtpp_socket_bind(struct rtpp_socket *, const struct sockaddr *,
   int);
@@ -259,7 +261,7 @@ void process_stun_request(struct rtp_packet *packet, int fd) {
     fprintf(stderr,"\n");
     fprintf(stderr,"======================\n");
 
-    struct ice_agent ice_agent = { .pwd[0] = {PASSWORD, strlen(PASSWORD)}, .pwd[1] = {PASSWORD, strlen(PASSWORD)} };
+    struct ice_agent ice_agent = { .pwd[0] = {stun_passwd, strlen(stun_passwd)}, .pwd[1] = {stun_passwd, strlen(stun_passwd)} };
     struct call_media media = { &ice_agent };
     struct packet_stream ps = { &media };
     struct stream_fd sfd = { .socket.fd = fd, &ps };

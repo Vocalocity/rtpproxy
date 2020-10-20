@@ -122,7 +122,6 @@ struct software {
 #define ice_request(a,b,c) 1
 #define ice_response(a,b,c,d) 1
 #define ilog(prio, fmt, ...) fprintf(stderr, fmt "\n", ##__VA_ARGS__)
-#define check_auth(a,b,c,d,e) 0
 static ssize_t socket_sendmsg(struct socket* socket, struct msghdr *mh, const endpoint_t *ep) {
 	mh->msg_name = ep->sin;
 	mh->msg_namelen = sizeof(struct sockaddr_in);
@@ -441,8 +440,10 @@ static int check_fingerprint(const str *msg, struct stun_attrs *attrs) {
 	return 0;
 }
 
-#if 0
 static int check_auth(const str *msg, struct stun_attrs *attrs, struct call_media *media, int dst, int src) {
+#if 1
+	return 0;
+#else
 	u_int16_t lenX;
 	char digest[20];
 	str ufrag[2];
@@ -482,8 +483,8 @@ static int check_auth(const str *msg, struct stun_attrs *attrs, struct call_medi
 	__integrity(iov, G_N_ELEMENTS(iov), &ag->pwd[dst], digest);
 
 	return memcmp(digest, attrs->msg_integrity.s, 20) ? -1 : 0;
-}
 #endif
+}
 
 /* XXX way too many parameters being passed around here, unify into a struct */
 static int stun_binding_success(struct stream_fd *sfd, struct header *req, struct stun_attrs *attrs,
@@ -561,6 +562,7 @@ static int __stun_request(struct stream_fd *sfd, const endpoint_t *sin,
 	  sprintf(buf + strlen(buf), ":%u", sin->port);
 	  fprintf(stderr,"Successful STUN binding request from %s\n", buf);
 	}
+
 	stun_binding_success(sfd, req, attrs, sin);
 
 	return ret;
@@ -665,18 +667,21 @@ bad_req:
 	/*
 	ilog(LOG_NOTICE | LOG_FLAG_LIMIT, "Received invalid STUN packet" SLF ": %s", SLP, err);
 	*/
+	fprintf(stderr, "Received invalid STUN packet: %s\n", err);
 	stun_error(sfd, sin, req, 400, "Bad request");
 	return 0;
 unauth:
 	/*
 	ilog(LOG_NOTICE | LOG_FLAG_LIMIT, "STUN authentication mismatch" SLF, SLP);
 	*/
+	fprintf(stderr, "STUN authentication mismatch\n");
 	stun_error(sfd, sin, req, 401, "Unauthorized");
 	return 0;
 ignore:
 	/*
 	ilog(LOG_NOTICE | LOG_FLAG_LIMIT, "Not handling potential STUN packet" SLF ": %s", SLP, err);
 	*/
+	fprintf(stderr, "Not handling potential STUN packet\n: %s", err);
 	return -1;
 }
 
